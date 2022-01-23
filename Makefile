@@ -2,13 +2,15 @@
 
 CC=gcc
 BINS=countdown license scratch stopwatch
-CFLAGS=-Wall -Wextra -Werror -pedantic
+CFLAGS=-ggdb -Wall -Wextra -Werror -pedantic
 
 all: $(BINS)
 
 clean:
 	rm -f $(BINS)
 
+binday: binday.c
+	$(CC) $(CFLAGS) -o binday binday.c
 countdown: countdown.c
 	$(CC) $(CFLAGS) -o countdown countdown.c
 

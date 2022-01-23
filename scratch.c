@@ -14,6 +14,7 @@
  */
 
 #include <time.h>
+#include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
 #include <assert.h>
@@ -45,23 +46,60 @@ time_t dateadd(time_t start, const char *offset) {
         exit(1);
     }
 
-    switch (*endptr) {
-    case '\0':
-    case 'd':
-    case 'D':
-        tm->tm_mday += (int)l;
-        break;
-    case 'w':
-        tm->tm_mday += (int)7*l;
-        break;
-    case 'm':
-    case 'M':
-        tm->tm_mon += (int)l;
-        break;
-    case 'y':
-    case 'Y':
-        tm->tm_year += (int)l;
-        break;
+    if (offset != endptr) {
+        switch (tolower(*endptr)) {
+        case '\0':
+        case 'd':
+            tm->tm_mday += (int)l;
+            break;
+        case 'w':
+            tm->tm_mday += (int)7*l;
+            break;
+        case 'm':
+            tm->tm_mon += (int)l;
+            break;
+        case 'y':
+            tm->tm_year += (int)l;
+            break;
+        default:
+            fprintf(stderr, "ERROR: Unknown date type: `%s`\n", endptr);
+            exit(1);
+        }
+    } else {
+        // strtol coulnd't parse anything -- check if we got a DOTW.
+        size_t len = strlen(offset);
+        int weekday;
+        if (strncasecmp("sunday", offset, len) == 0) {
+            if (len < 2) {
+                fprintf(stderr, "ERROR: Ambiguous weekday: `%s`\n", offset);
+                exit(1);
+            }
+            weekday = 0;
+        } else if (strncasecmp("monday", offset, len) == 0) {
+            weekday = 1;
+        } else if (strncasecmp("tuesday", offset, len) == 0) {
+            if (len < 2) {
+                fprintf(stderr, "ERROR: Ambiguous weekday: `%s`\n", offset);
+                exit(1);
+            }
+            weekday = 2;
+        } else if (strncasecmp("wednesday", offset, len) == 0) {
+            weekday = 3;
+        } else if (strncasecmp("thursday", offset, len) == 0) {
+            weekday = 4;
+        } else if (strncasecmp("friday", offset, len) == 0) {
+            weekday = 5;
+        } else if (strncasecmp("saturday", offset, len) == 0) {
+            weekday = 6;
+        } else {
+            fprintf(stderr, "ERROR: Couldn't parse offset: `%s`\n", offset);
+            exit(1);
+        }
+
+        while (tm->tm_wday != weekday) {
+            tm->tm_mday += 1;
+            mktime(tm);
+        }
     }
 
     return mktime(tm);
