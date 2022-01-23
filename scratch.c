@@ -67,6 +67,14 @@ time_t dateadd(time_t start, const char *offset) {
         }
     } else {
         // strtol coulnd't parse anything -- check if we got a DOTW.
+        int sign = 1;
+        if (offset[0] == '-') {
+            sign = -1;
+            offset++;
+        } else if (offset[0] == '+') {
+            offset++;
+        }
+
         size_t len = strlen(offset);
         int weekday;
         if (strncasecmp("sunday", offset, len) == 0) {
@@ -97,7 +105,7 @@ time_t dateadd(time_t start, const char *offset) {
         }
 
         while (tm->tm_wday != weekday) {
-            tm->tm_mday += 1;
+            tm->tm_mday += 1 * sign;
             mktime(tm);
         }
     }

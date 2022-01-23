@@ -9,8 +9,6 @@ all: $(BINS)
 clean:
 	rm -f $(BINS)
 
-binday: binday.c
-	$(CC) $(CFLAGS) -o binday binday.c
 countdown: countdown.c
 	$(CC) $(CFLAGS) -o countdown countdown.c
 
