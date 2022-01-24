@@ -104,10 +104,10 @@ time_t dateadd(time_t start, const char *offset) {
             exit(1);
         }
 
-        while (tm->tm_wday != weekday) {
+        do {
             tm->tm_mday += 1 * sign;
             mktime(tm);
-        }
+        } while (tm->tm_wday != weekday);
     }
 
     return mktime(tm);
