@@ -21,3 +21,5 @@ scratch: scratch.c
 stopwatch: stopwatch.c
 	$(CC) $(CFLAGS) -o stopwatch stopwatch.c
 
+%: %.c
+	$(CC) $(CFLAGS) -o $@ $<
