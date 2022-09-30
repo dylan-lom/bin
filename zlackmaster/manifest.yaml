@@ -1,0 +1,25 @@
+display_information:
+  name: zlackmaster connect (enterprise)
+settings:
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  is_hosted: false
+  token_rotation_enabled: false
+features:
+  bot_user:
+    display_name: echo
+oauth_config:
+  scopes:
+    bot:
+      - channels:history
+      - channels:join
+      - channels:read
+      - chat:write
+      - chat:write.public
+      - groups:history
+      - groups:read
+      - im:history
+      - im:read
+      - mpim:history
+      - mpim:read
+      - users:read
