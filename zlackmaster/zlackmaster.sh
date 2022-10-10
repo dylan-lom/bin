@@ -70,8 +70,8 @@ dupeMessage() {
 post "/conversations.join" --data "{ \"channel\": \"$from\" }" > /dev/null
 post "/conversations.join" --data "{ \"channel\": \"$to\" }" > /dev/null
 
-test -f "90daysago" || cc -o 90daysago 90daysago.c
-latest=$(./90daysago)
+test -f "89daysago" || cc -o 89daysago 89daysago.c
+latest=$(./89daysago)
 echo "Reviving messages before: $latest"
 
 for ts in $(get "/conversations.history?channel=$from&latest=$latest" | jq '.messages[].ts' | unquote | sort); do

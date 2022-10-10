@@ -1,4 +1,4 @@
-/* cc -Wall -Wextra -pedantic -o 90daysago 90daysago.c */
+/* cc -Wall -Wextra -pedantic -o 89daysago 89daysago.c */
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -9,7 +9,7 @@ main(void)
 {
 	time_t t = time(NULL);
 	struct tm *tm = gmtime(&t);
-	tm->tm_mday -= 90;
+	tm->tm_mday -= 89;
 	printf("%lld\n", mktime(tm));
 	return 0;
 }
