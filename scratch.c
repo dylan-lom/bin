@@ -1,17 +1,4 @@
-/* scratch.c v0.1.0
- * Copyright (c) 2021 Dylan Lom <djl@dylanlom.com>
- *
- * Permission to use, copy, modify, and/or distribute this software for any
- * purpose with or without fee is hereby granted.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
- * REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
- * AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
- * INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
- * LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
- * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
- * PERFORMANCE OF THIS SOFTWARE.
- */
+/* cc -o scratch -Wall -Wextra -pedantic scratch.c */
 
 #include <time.h>
 #include <ctype.h>
@@ -117,8 +104,15 @@ time_t dateadd(time_t start, const char *offset) {
 int
 main(int argc, const char *argv[])
 {
+    int dry = 0;
+    if (argc > 1 && strcmp("-n", argv[1]) == 0) {
+        dry = 1;
+        argc--;
+        argv++;
+    }
+
     const char *editor = getenv("VISUAL");
-    if (editor == NULL) {
+    if (!dry && editor == NULL) {
         fprintf(stderr, "ERROR: VISUAL environment variable is not set.\n");
         exit(1);
     }
@@ -132,26 +126,33 @@ main(int argc, const char *argv[])
     time_t day = time(0);
     if (argc > 1) day = dateadd(day, argv[1]);
 
+    /* TODO: This should be extracted + refactored at this point. */
     // Construct the command string
     {
         int cmdsize = sizeof(cmd);
         char *cmdend = cmd;
-
-        int n = snprintf(cmdend, cmdsize, "%s %s/.scratch/", editor, home);
+        int n = -1;
+        if (dry) {
+            n = snprintf(cmdend, cmdsize, "%s/.scratch/", home);
+        } else {
+            n = snprintf(cmdend, cmdsize, "%s %s/.scratch/", editor, home);
+        }
         cmdend += n;
         cmdsize -= n;
         if (cmdsize <= 0) {
             assert(0 && "Ran out of space while constructing command.");
         }
 
-        // Make ~/.scratch if it does not exist
-        struct stat sb;
-        char *pathname = cmd + strlen(editor) + 1;
-        if (stat(pathname, &sb) == -1 || !S_ISDIR(sb.st_mode)) {
-            if (mkdir(pathname, S_IRWXU) == -1) {
-                fprintf(stderr,
-                        "ERROR: Unable to create directory %s: %s.\n",
-                        pathname, strerror(errno));
+        if (!dry) {
+               // Make ~/.scratch if it does not exist
+               struct stat sb;
+               char *pathname = cmd + strlen(editor) + 1;
+               if (stat(pathname, &sb) == -1 || !S_ISDIR(sb.st_mode)) {
+                if (mkdir(pathname, S_IRWXU) == -1) {
+                    fprintf(stderr,
+                            "ERROR: Unable to create directory %s: %s.\n",
+                            pathname, strerror(errno));
+                }
             }
         }
 
@@ -162,6 +163,11 @@ main(int argc, const char *argv[])
             assert(0 && "Ran out of space while constructing command.");
         }
     }
+
+    if (dry) {
+        printf("%s\n", cmd);
+        exit(0);
+   }
 
     int exitcode;
     if ((exitcode = system(cmd)) == -1) {
