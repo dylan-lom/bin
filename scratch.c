@@ -2,6 +2,7 @@
 
 #include <time.h>
 #include <ctype.h>
+#include <err.h>
 #include <errno.h>
 #include <stdio.h>
 #include <assert.h>
@@ -27,11 +28,7 @@ time_t dateadd(time_t start, const char *offset) {
 	errno = 0;
 	char *endptr;
 	long l = strtol(offset, &endptr, 10);
-	if (errno) {
-		fprintf(stderr, "ERROR: Unable to parse offset: %s.\n",
-				strerror(errno));
-		exit(1);
-	}
+	if (errno) err(1, "ERROR: Unable to parse offset");
 
 	if (offset != endptr) {
 		switch (tolower(*endptr)) {
@@ -49,8 +46,7 @@ time_t dateadd(time_t start, const char *offset) {
 			tm->tm_year += (int)l;
 			break;
 		default:
-			fprintf(stderr, "ERROR: Unknown date type: `%s`\n", endptr);
-			exit(1);
+			errx(1, "ERROR: Unknown date type: `%s`\n", endptr);
 		}
 	} else {
 		// strtol coulnd't parse anything -- check if we got a DOTW.
@@ -65,18 +61,13 @@ time_t dateadd(time_t start, const char *offset) {
 		size_t len = strlen(offset);
 		int weekday;
 		if (strncasecmp("sunday", offset, len) == 0) {
-			if (len < 2) {
-				fprintf(stderr, "ERROR: Ambiguous weekday: `%s`\n", offset);
-				exit(1);
-			}
+			if (len < 2) errx(1, "ERROR: Ambiguous weekday: `%s`\n", offset);
+
 			weekday = 0;
 		} else if (strncasecmp("monday", offset, len) == 0) {
 			weekday = 1;
 		} else if (strncasecmp("tuesday", offset, len) == 0) {
-			if (len < 2) {
-				fprintf(stderr, "ERROR: Ambiguous weekday: `%s`\n", offset);
-				exit(1);
-			}
+			if (len < 2) errx(1, "ERROR: Ambiguous weekday: `%s`\n", offset);
 			weekday = 2;
 		} else if (strncasecmp("wednesday", offset, len) == 0) {
 			weekday = 3;
@@ -87,8 +78,7 @@ time_t dateadd(time_t start, const char *offset) {
 		} else if (strncasecmp("saturday", offset, len) == 0) {
 			weekday = 6;
 		} else {
-			fprintf(stderr, "ERROR: Couldn't parse offset: `%s`\n", offset);
-			exit(1);
+			errx(1, "ERROR: Couldn't parse offset: `%s`\n", offset);
 		}
 
 		do {
@@ -124,14 +114,26 @@ scratchpath(const char *home)
 }
 
 char *
-scratchfile(time_t date)
+scratchfile(const char *category, time_t date)
 {
 	size_t filelen = strlen("YYYY-mm-dd.md") + 1;
+	if (category != NULL) filelen += strlen(category) + 1;
 	char *file = calloc(filelen, sizeof(*file));
 
-	size_t ret = strftime(file, filelen, "%Y-%m-%d.md", localtime(&date));
+	size_t ret;
+	if (category != NULL) {
+		ret = snprintf(file, filelen, "%s-", category);
+		assert(ret < filelen);
+	}
+
+	ret = strftime(file + ret, filelen - ret, "%Y-%m-%d.md", localtime(&date));
 	assert(ret > 0); // Indicates an error
 	return file;
+}
+
+int streq(const char *s1, const char *s2)
+{
+	return strcmp(s1, s2) == 0;
 }
 
 /* Open a "scratch" document for the day */
@@ -139,29 +141,39 @@ int
 main(int argc, const char *argv[])
 {
 	int dry = 0;
-	if (argc > 1 && strcmp("-n", argv[1]) == 0) {
-		dry = 1;
-		argc--;
-		argv++;
+	const char *cat = NULL;
+
+	while (argc > 1) {
+		if (streq(argv[1], "-n")) {
+			dry = 1;
+		} else if (streq(argv[1], "-c")) {
+			if (argc < 3) errx(1, "-c option requires an argument");
+
+			cat = argv[2];
+			argc--; argv++;
+		} else {
+			break;
+		}
+
+		argc--; argv++;
 	}
+
 
 	const char *editor = getenv("VISUAL");
 	if (!dry && editor == NULL) {
-		fprintf(stderr, "ERROR: VISUAL environment variable is not set.\n");
-		exit(1);
+		errx(1, "ERROR: VISUAL environment variable is not set.\n");
 	}
 
 	const char *home = getenv("HOME");
 	if (home == NULL) {
-		fprintf(stderr, "ERROR: HOME environment variable is not set.\n");
-		exit(1);
+		errx(1, "ERROR: HOME environment variable is not set.\n");
 	}
 
 	time_t day = time(0);
 	if (argc > 1) day = dateadd(day, argv[1]);
 
 	char *path = scratchpath(home);
-	char *file = scratchfile(day);
+	char *file = scratchfile(cat, day);
 	char *cmd = scratchcmd(editor, path, file);
 
 	int exitcode = 0;
@@ -171,18 +183,13 @@ main(int argc, const char *argv[])
 	} else {
 		// Make ~/.scratch if it does not exist
 		struct stat sb;
-		if (stat(path, &sb) == -1 || !S_ISDIR(sb.st_mode)) {
-			if (mkdir(path, S_IRWXU) == -1) {
-				fprintf(stderr,
-						"ERROR: Unable to create directory %s: %s.\n",
-						path, strerror(errno));
-			}
-		}
+		if (
+			(stat(path, &sb) == -1 || !S_ISDIR(sb.st_mode)) // path doesn't exist
+			&& mkdir(path, S_IRWXU) == -1 // failed to make it!
+		) errx(1, "ERROR: Unable to create directory %s", path);
 
-		if ((exitcode = system(cmd)) == -1) {
-			fprintf(stderr, "ERROR: Unable to start editor: %s\n", strerror(errno));
-			exit(1);
-		}
+		exitcode = system(cmd);
+		if (exitcode == -1) errx(1, "ERROR: Unable to start editor");
 	}
 
 	free(path);
