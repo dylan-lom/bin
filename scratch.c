@@ -120,7 +120,7 @@ scratchfile(const char *category, time_t date)
 	if (category != NULL) filelen += strlen(category) + 1;
 	char *file = calloc(filelen, sizeof(*file));
 
-	size_t ret;
+	size_t ret = 0;
 	if (category != NULL) {
 		ret = snprintf(file, filelen, "%s-", category);
 		assert(ret < filelen);
