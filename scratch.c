@@ -174,7 +174,6 @@ main(int argc, const char *argv[])
 
 	char *path = scratchpath(home);
 	char *file = scratchfile(cat, day);
-	char *cmd = scratchcmd(editor, path, file);
 
 	int exitcode = 0;
 
@@ -188,13 +187,14 @@ main(int argc, const char *argv[])
 			&& mkdir(path, S_IRWXU) == -1 // failed to make it!
 		) errx(1, "ERROR: Unable to create directory %s", path);
 
+		char *cmd = scratchcmd(editor, path, file);
 		exitcode = system(cmd);
 		if (exitcode == -1) errx(1, "ERROR: Unable to start editor");
+		free(cmd);
 	}
 
 	free(path);
 	free(file);
-	free(cmd);
 
 	return exitcode;
 }
